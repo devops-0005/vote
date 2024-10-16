@@ -67,7 +67,7 @@ spec:
   containers:
   - name: kaniko
     image: gcr.io/kaniko-project/executor:latest
-    args: ["--dockerfile=Dockerfile", "--context=dir://workspace/", "--destination=docker.io/xxxxxx/vote:\${BUILD_ID}", "--destination=docker.io/xxxxxx/vote:dev"]
+    args: ["--dockerfile=Dockerfile", "--context=dir://workspace/", "--destination=docker.io/initcron/votek:\${BUILD_ID}", "--destination=docker.io/initcron/votek:dev"]
     volumeMounts:
       - name: docker-config
         mountPath: /kaniko/.docker
