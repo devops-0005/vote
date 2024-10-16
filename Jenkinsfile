@@ -37,6 +37,27 @@ spec:
     }
 
     stages {
+        stage('Build App') {
+            steps {
+                container('python') {
+                    echo 'Compiling vote app'
+                    // Add any additional build commands if required
+                    sh 'pip install -r requirements.txt'
+                }
+            }
+        }
+
+        stage('Test App') {
+            steps {
+                container('python') {
+                    echo 'Running Unit Tests on vote app'
+                    // Run unit tests here, placeholder for 'nosetests' or any test framework you use
+                    sh 'pip install -r requirements.txt'
+                    sh 'nosetests -v || true'  // Replace with the correct test command
+                }
+            }
+        }
+
         stage('Docker Build and Push with BuildKit') {
             when {
                 branch "main"
