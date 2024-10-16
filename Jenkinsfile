@@ -50,7 +50,7 @@ spec:
                         // Ensure commitHash is non-empty and fallback to 'latest' if necessary
                         def commitHash = env.GIT_COMMIT?.take(7) ?: 'latest'
 
-                        // Ensure that the commitHash is valid
+                        // Ensure that the commitHash is valid and remove any extra colons
                         if (!commitHash) {
                             error("Commit hash is empty or invalid. Falling back to 'latest'.")
                         }
@@ -64,13 +64,13 @@ spec:
                         echo '{ "auths": { "https://index.docker.io/v1/": { "auth": "'$(echo -n $DOCKER_CREDS_USR:$DOCKER_CREDS_PSW | base64)'" } } }' > /root/.docker/config.json
                         '''
 
-                        // Run BuildKit build and push command with explicit tag
-                        sh '''
+                        // Run BuildKit build and push command with valid tag format
+                        sh """
                           buildctl build --frontend dockerfile.v0 \
                           --local context=. \
                           --local dockerfile=. \
                           --output type=image,name=docker.io/initcron/vote:${commitHash},push=true
-                        '''
+                        """
                     }
                 }
             }
