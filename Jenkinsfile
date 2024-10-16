@@ -55,7 +55,7 @@ spec:
             }
         }
 
-        stage('Kaniko BnP') {
+        stage('Docker Build and Push with Kaniko') {
             agent {
                 kubernetes {
                     inheritFrom 'kaniko-agent'
@@ -69,13 +69,18 @@ spec:
     image: gcr.io/kaniko-project/executor:latest
     args:
     - "--dockerfile=Dockerfile"
-    - "--context=dir://workspace/"
+    - "--context=/workspace/"
     - "--destination=docker.io/initcron/vote:${env.BUILD_ID}"
     - "--destination=docker.io/initcron/vote:dev"
     volumeMounts:
+      - name: jenkins-workspace
+        mountPath: /workspace
       - name: docker-config
         mountPath: /kaniko/.docker
   volumes:
+  - name: jenkins-workspace
+    persistentVolumeClaim:
+      claimName: jenkins  # This points to the PVC you mentioned
   - name: docker-config
     secret:
       secretName: docker-registry-credentials
