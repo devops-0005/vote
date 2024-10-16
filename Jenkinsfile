@@ -44,8 +44,19 @@ spec:
             steps {
                 container('buildkit') {
                     script {
+                        // Print debug info for commit hash
+                        echo "GIT_COMMIT: ${env.GIT_COMMIT}"
+
                         // Ensure commitHash is non-empty and fallback to 'latest' if necessary
                         def commitHash = env.GIT_COMMIT?.take(7) ?: 'latest'
+
+                        // Ensure that the commitHash is valid
+                        if (!commitHash) {
+                            error("Commit hash is empty or invalid. Falling back to 'latest'.")
+                        }
+
+                        // Print debug info for commitHash
+                        echo "Using image tag: ${commitHash}"
 
                         // Create a Docker config file with credentials
                         sh '''
@@ -53,7 +64,7 @@ spec:
                         echo '{ "auths": { "https://index.docker.io/v1/": { "auth": "'$(echo -n $DOCKER_CREDS_USR:$DOCKER_CREDS_PSW | base64)'" } } }' > /root/.docker/config.json
                         '''
 
-                        // Run BuildKit build and push command
+                        // Run BuildKit build and push command with explicit tag
                         sh '''
                           buildctl build --frontend dockerfile.v0 \
                           --local context=. \
