@@ -17,13 +17,11 @@ spec:
       runAsUser: 0  # Run container as root
   - name: buildkit
     image: moby/buildkit:latest
+    securityContext:
+      privileged: true  # Run BuildKit container in privileged mode
     env:
       - name: DOCKER_BUILDKIT
         value: "1"
-      - name: BUILDKIT_ROOTLESS
-        value: "1"
-      - name: BUILDKIT_SNAPSHOTTER
-        value: "overlayfs"
     volumeMounts:
       - name: buildkit-cache
         mountPath: /var/lib/buildkit
@@ -35,29 +33,10 @@ spec:
     }
 
     environment {
-        DOCKER_CREDS = credentials('dockerlogin')  // Retrieve Docker credentials from Jenkins credentials store
+        DOCKER_CREDS = credentials('dockerlogin')
     }
 
     stages {
-        stage('Build') {
-            steps {
-                container('python') {
-                    echo 'Compiling vote app'
-                    sh 'pip install -r requirements.txt'
-                }
-            }
-        }
-
-        stage('Unit Test') {
-            steps {
-                container('python') {
-                    echo 'Running Unit Tests on vote app'
-                    sh 'pip install -r requirements.txt'
-                    echo 'Placeholder to run nosetests -v'
-                }
-            }
-        }
-
         stage('Docker Build and Push with BuildKit') {
             when {
                 branch "main"
