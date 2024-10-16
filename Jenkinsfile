@@ -55,7 +55,7 @@ spec:
             }
         }
 
-        stage('Docker Build and Push with Kaniko') {
+        stage('Kaniko BnP') {
             agent {
                 kubernetes {
                     inheritFrom 'kaniko-agent'
@@ -67,7 +67,11 @@ spec:
   containers:
   - name: kaniko
     image: gcr.io/kaniko-project/executor:latest
-    args: ["--dockerfile=Dockerfile", "--context=dir://workspace/", "--destination=docker.io/initcron/votek:\${BUILD_ID}", "--destination=docker.io/initcron/votek:dev"]
+    args:
+    - "--dockerfile=Dockerfile"
+    - "--context=dir://workspace/"
+    - "--destination=docker.io/initcron/vote:${env.BUILD_ID}"
+    - "--destination=docker.io/initcron/vote:dev"
     volumeMounts:
       - name: docker-config
         mountPath: /kaniko/.docker
