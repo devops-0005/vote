@@ -1,13 +1,9 @@
 pipeline {
-    agent none
-
-    stages {
-        stage('Build') {
-            agent {
-                kubernetes {
-                    inheritFrom 'python-builder'
-                    defaultContainer 'python'
-                    yaml """
+    agent {
+        kubernetes {
+            label 'python-docker-agent'
+            defaultContainer 'jnlp'
+            yaml """
 apiVersion: v1
 kind: Pod
 spec:
@@ -19,86 +15,63 @@ spec:
     tty: true
     securityContext:
       runAsUser: 0  # Run container as root
+  - name: docker
+    image: docker:20.10-dind
+    securityContext:
+      privileged: true  # Docker-in-Docker requires privileged mode
+    volumeMounts:
+      - name: docker-sock
+        mountPath: /var/run/docker.sock
+  volumes:
+  - name: docker-sock
+    emptyDir: {}
 """
-                }
-            }
+        }
+    }
+
+    stages {
+        stage('Build') {
             steps {
-                echo 'Compiling vote app'
-                sh 'pip install -r requirements.txt'
+                container('python') {
+                    echo 'Compiling vote app'
+                    sh 'pip install -r requirements.txt'
+                }
             }
         }
 
         stage('Unit Test') {
-            agent {
-                kubernetes {
-                    inheritFrom 'python-test'
-                    defaultContainer 'python'
-                    yaml """
-apiVersion: v1
-kind: Pod
-spec:
-  containers:
-  - name: python
-    image: python:alpine3.17
-    command:
-    - cat
-    tty: true
-    securityContext:
-      runAsUser: 0  # Run container as root
-"""
-                }
-            }
             steps {
-                echo 'Running Unit Tests on vote app'
-                sh 'pip install -r requirements.txt'
-                echo 'Placeholder to run nosetests -v'
+                container('python') {
+                    echo 'Running Unit Tests on vote app'
+                    sh 'pip install -r requirements.txt'
+                    echo 'Placeholder to run nosetests -v'
+                }
             }
         }
 
-        stage('Docker Build and Push with Kaniko') {
-            agent {
-                kubernetes {
-                    inheritFrom 'kaniko-agent'
-                    defaultContainer 'kaniko'
-                    yaml """
-apiVersion: v1
-kind: Pod
-spec:
-  containers:
-  - name: kaniko
-    image: gcr.io/kaniko-project/executor:latest
-    args:
-    - "--dockerfile=Dockerfile"
-    - "--context=/workspace/"
-    - "--destination=docker.io/initcron/vote:${env.BUILD_ID}"
-    - "--destination=docker.io/initcron/vote:dev"
-    volumeMounts:
-      - name: jenkins-workspace
-        mountPath: /workspace
-      - name: docker-config
-        mountPath: /kaniko/.docker
-  volumes:
-  - name: jenkins-workspace
-    persistentVolumeClaim:
-      claimName: jenkins  # This points to the PVC you mentioned
-  - name: docker-config
-    secret:
-      secretName: docker-registry-credentials
-"""
-                }
-            }
+        stage('Docker Build and Push') {
             when {
                 branch "main"
             }
             steps {
-                echo 'Packaging vote app with Kaniko'
+                container('docker') {
+                    script {
+                        def commitHash = env.GIT_COMMIT.take(7)
+                        docker.withRegistry('https://index.docker.io/v1/', 'dockerlogin') {
+                            def dockerImage = docker.build("initcron/vote:${commitHash}", "./")
+                            dockerImage.push()
+                            dockerImage.push("latest")
+                            dockerImage.push("dev")
+                        }
+                    }
+                }
             }
         }
     }
 
     post {
         always {
-            echo 'Pipeline for vote is complete..'
+            echo 'Pipeline for vote is complete.'
         }
     }
 }
