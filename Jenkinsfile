@@ -5,7 +5,7 @@ pipeline {
         stage('Build') {
             agent {
                 kubernetes {
-                    label 'python-builder'
+                    inheritFrom 'python-builder'
                     defaultContainer 'python'
                     yaml """
 apiVersion: v1
@@ -31,7 +31,7 @@ spec:
         stage('Unit Test') {
             agent {
                 kubernetes {
-                    label 'python-test'
+                    inheritFrom 'python-test'
                     defaultContainer 'python'
                     yaml """
 apiVersion: v1
@@ -58,7 +58,7 @@ spec:
         stage('Docker Build and Push with Kaniko') {
             agent {
                 kubernetes {
-                    label 'kaniko-agent'
+                    inheritFrom 'kaniko-agent'
                     defaultContainer 'kaniko'
                     yaml """
 apiVersion: v1
