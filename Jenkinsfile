@@ -79,7 +79,7 @@ spec:
                 }
             }
             when {
-                branch "master"
+                branch "main"
             }
             steps {
                 echo 'Packaging vote app with Kaniko'
