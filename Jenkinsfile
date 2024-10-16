@@ -44,7 +44,8 @@ spec:
             steps {
                 container('buildkit') {
                     script {
-                        def commitHash = env.GIT_COMMIT.take(7)
+                        // Ensure commitHash is non-empty and fallback to 'latest' if necessary
+                        def commitHash = env.GIT_COMMIT?.take(7) ?: 'latest'
 
                         // Create a Docker config file with credentials
                         sh '''
