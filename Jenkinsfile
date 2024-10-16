@@ -1,7 +1,7 @@
 pipeline {
     agent {
         kubernetes {
-            label 'python-docker-agent'
+            label 'python-buildkit-agent'
             defaultContainer 'jnlp'
             yaml """
 apiVersion: v1
@@ -15,18 +15,23 @@ spec:
     tty: true
     securityContext:
       runAsUser: 0  # Run container as root
-  - name: docker
-    image: docker:20.10-dind
-    securityContext:
-      privileged: true  # Docker-in-Docker requires privileged mode
+  - name: buildkit
+    image: moby/buildkit:latest
+    env:
+      - name: DOCKER_BUILDKIT
+        value: "1"
     volumeMounts:
-      - name: docker-sock
-        mountPath: /var/run/docker.sock
+      - name: buildkit-cache
+        mountPath: /var/lib/buildkit
   volumes:
-  - name: docker-sock
+  - name: buildkit-cache
     emptyDir: {}
 """
         }
+    }
+
+    environment {
+        DOCKER_CREDS = credentials('dockerlogin')  // Retrieve Docker credentials from Jenkins credentials store
     }
 
     stages {
@@ -49,20 +54,28 @@ spec:
             }
         }
 
-        stage('Docker Build and Push') {
+        stage('Docker Build and Push with BuildKit') {
             when {
                 branch "main"
             }
             steps {
-                container('docker') {
+                container('buildkit') {
                     script {
                         def commitHash = env.GIT_COMMIT.take(7)
-                        docker.withRegistry('https://index.docker.io/v1/', 'dockerlogin') {
-                            def dockerImage = docker.build("initcron/vote:${commitHash}", "./")
-                            dockerImage.push()
-                            dockerImage.push("latest")
-                            dockerImage.push("dev")
-                        }
+
+                        // Create a Docker config file with credentials
+                        sh '''
+                        mkdir -p /root/.docker
+                        echo '{ "auths": { "https://index.docker.io/v1/": { "auth": "'$(echo -n $DOCKER_CREDS_USR:$DOCKER_CREDS_PSW | base64)'" } } }' > /root/.docker/config.json
+                        '''
+
+                        // Run BuildKit build and push command
+                        sh '''
+                          buildctl build --frontend dockerfile.v0 \
+                          --local context=. \
+                          --local dockerfile=. \
+                          --output type=image,name=docker.io/initcron/vote:${commitHash},push=true
+                        '''
                     }
                 }
             }
