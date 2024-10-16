@@ -20,6 +20,10 @@ spec:
     env:
       - name: DOCKER_BUILDKIT
         value: "1"
+      - name: BUILDKIT_ROOTLESS
+        value: "1"
+      - name: BUILDKIT_SNAPSHOTTER
+        value: "overlayfs"
     volumeMounts:
       - name: buildkit-cache
         mountPath: /var/lib/buildkit
