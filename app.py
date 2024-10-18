@@ -8,7 +8,7 @@ import json
 option_a = os.getenv('OPTION_A', "JenkinsCI")
 option_b = os.getenv('OPTION_B', "Argo Workflows")
 hostname = socket.gethostname()
-version = 'v2.0.1'
+version = 'v2.0.2'
 
 app = Flask(__name__)
 
